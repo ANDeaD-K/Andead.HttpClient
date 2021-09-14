@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 
 namespace Andead.HttpClient
 {
-    public class BaseResponse : IDisposable
+    public class BaseResponseDeserializer : IDisposable
     {
         private readonly HttpResponseMessage _responseMessage;
         private readonly JsonSerializerSettings _jsonSerializerSettings;
         private readonly Lazy<IReadOnlyDictionary<string, IEnumerable<string>>> _headers;
 
-        public BaseResponse(HttpResponseMessage responseMessage, JsonSerializerSettings jsonSerializerSettings)
+        public BaseResponseDeserializer(HttpResponseMessage responseMessage, JsonSerializerSettings jsonSerializerSettings)
         {
             _responseMessage = responseMessage;
             _jsonSerializerSettings = jsonSerializerSettings;

@@ -8,10 +8,11 @@ using System.Threading.Tasks;
 
 namespace Andead.HttpClient
 {
-    public class Client<TBaseResponse> where TBaseResponse : BaseResponse
+    public class Client<TResponseDeserializer> where TResponseDeserializer : BaseResponseDeserializer
     {
         private readonly System.Net.Http.HttpClient _httpClient;
-        private readonly JsonSerializerSettings _serializerSettings = new()
+
+        public JsonSerializerSettings SerializerSettings { get; set; } = new()
         {
             ContractResolver = new DefaultContractResolver
             {
@@ -24,9 +25,9 @@ namespace Andead.HttpClient
             _httpClient = httpClient;
         }
 
-        private TBaseResponse ResponseBuilder(HttpResponseMessage message, JsonSerializerSettings serializerSettings)
+        private TResponseDeserializer CreateResponseDeserializer(HttpResponseMessage message, JsonSerializerSettings serializerSettings)
         {
-            return (TBaseResponse)Activator.CreateInstance(typeof(TBaseResponse), message, serializerSettings);
+            return (TResponseDeserializer)Activator.CreateInstance(typeof(TResponseDeserializer), message, serializerSettings);
         }
 
         private readonly Func<object, JsonSerializerSettings, HttpContent> ContentBuilder = (request, serializerSettings) =>
@@ -48,7 +49,7 @@ namespace Andead.HttpClient
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            var content = ContentBuilder(request, _serializerSettings);
+            var content = ContentBuilder(request, SerializerSettings);
 
             using (var message = new HttpRequestMessage())
             {
@@ -63,8 +64,8 @@ namespace Andead.HttpClient
                         .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                         .ConfigureAwait(false);
 
-                    var response = ResponseBuilder(httpResponse, _serializerSettings);
-                    return await response.GetContentOrThrow<TResponse>();
+                    var deserializer = CreateResponseDeserializer(httpResponse, SerializerSettings);
+                    return await deserializer.GetContentOrThrow<TResponse>();
                 }
                 catch (Exception ex)
                 {
