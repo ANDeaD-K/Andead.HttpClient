@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Andead.HttpClient
 {
-    public class Client
+    public class Client<TResponse> where TResponse : BaseResponse
     {
         private readonly System.Net.Http.HttpClient _httpClient;
         private readonly JsonSerializerSettings _serializerSettings = new()
@@ -24,8 +24,13 @@ namespace Andead.HttpClient
             _httpClient = httpClient;
         }
 
-        private readonly Func<HttpResponseMessage, JsonSerializerSettings, BaseResponse> ResponseBuilder = (message, serializerSettings) =>
-            new BaseResponse(message, serializerSettings);
+        //private readonly Func<HttpResponseMessage, JsonSerializerSettings, BaseResponse> ResponseBuilder = (message, serializerSettings) =>
+        //    new BaseResponse(message, serializerSettings);
+
+        private TResponse ResponseBuilder(HttpResponseMessage message, JsonSerializerSettings serializerSettings)
+        {
+            return (TResponse)Activator.CreateInstance(typeof(TResponse), message, serializerSettings);
+        }
 
         private readonly Func<object, JsonSerializerSettings, HttpContent> ContentBuilder = (request, serializerSettings) =>
         {
@@ -34,16 +39,14 @@ namespace Andead.HttpClient
             return content;
         };
 
-        public async Task<TResponse> ExecuteAsync<TRequest, TResponse>(TRequest request)
+        public async Task<TResponse> ExecuteAsync<TRequest>(TRequest request)
             where TRequest : BaseRequest
-            where TResponse : BaseResponse
         {
-            return await ExecuteAsync<TRequest, TResponse>(request, CancellationToken.None);
+            return await ExecuteAsync(request, CancellationToken.None);
         }
 
-        public async Task<TResponse> ExecuteAsync<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken)
+        public async Task<TResponse> ExecuteAsync<TRequest>(TRequest request, CancellationToken cancellationToken)
             where TRequest : BaseRequest
-            where TResponse : BaseResponse
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
