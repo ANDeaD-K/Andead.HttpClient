@@ -1,0 +1,38 @@
+name: .NET
+
+on:
+  push:
+    branches: [ master ]
+    tags:
+    - 'v*'
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    environment:
+      name: Release
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build -c Release --no-restore
+    - name: Test
+      run: dotnet test -c Release --no-build --verbosity normal
+    - name: Create new Semantic Version
+      uses: zwaldowski/semver-release-action@v2
+      id: set_version
+      with:
+        bump: patch
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: NuGet Pack
+      run: dotnet pack -c Release --no-build -p:PackageVersion=${{ steps.set_version.outputs.version }} --output publish
+    - name: NuGet Push
+      run: dotnet nuget push publish/*.nupkg -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json
