@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Andead.HttpClient
 {
-    public class Client<TResponse> where TResponse : BaseResponse
+    public class Client<TBaseResponse> where TBaseResponse : BaseResponse
     {
         private readonly System.Net.Http.HttpClient _httpClient;
         private readonly JsonSerializerSettings _serializerSettings = new()
@@ -24,12 +24,9 @@ namespace Andead.HttpClient
             _httpClient = httpClient;
         }
 
-        //private readonly Func<HttpResponseMessage, JsonSerializerSettings, BaseResponse> ResponseBuilder = (message, serializerSettings) =>
-        //    new BaseResponse(message, serializerSettings);
-
-        private TResponse ResponseBuilder(HttpResponseMessage message, JsonSerializerSettings serializerSettings)
+        private TBaseResponse ResponseBuilder(HttpResponseMessage message, JsonSerializerSettings serializerSettings)
         {
-            return (TResponse)Activator.CreateInstance(typeof(TResponse), message, serializerSettings);
+            return (TBaseResponse)Activator.CreateInstance(typeof(TBaseResponse), message, serializerSettings);
         }
 
         private readonly Func<object, JsonSerializerSettings, HttpContent> ContentBuilder = (request, serializerSettings) =>
@@ -39,20 +36,19 @@ namespace Andead.HttpClient
             return content;
         };
 
-        public async Task<TResponse> ExecuteAsync<TRequest>(TRequest request)
+        public async Task<TResponse> ExecuteAsync<TRequest, TResponse>(TRequest request)
             where TRequest : BaseRequest
         {
-            return await ExecuteAsync(request, CancellationToken.None);
+            return await ExecuteAsync<TRequest, TResponse>(request, CancellationToken.None);
         }
 
-        public async Task<TResponse> ExecuteAsync<TRequest>(TRequest request, CancellationToken cancellationToken)
+        public async Task<TResponse> ExecuteAsync<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken)
             where TRequest : BaseRequest
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
             var content = ContentBuilder(request, _serializerSettings);
-            var requestText = await content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             using (var message = new HttpRequestMessage())
             {
