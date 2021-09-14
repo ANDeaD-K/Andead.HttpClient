@@ -34,14 +34,16 @@ namespace Andead.HttpClient
             return content;
         };
 
-        public Task<BaseResponse> ExecuteAsync<TRequest>(TRequest request)
+        public async Task<TResponse> ExecuteAsync<TRequest, TResponse>(TRequest request)
             where TRequest : BaseRequest
+            where TResponse : BaseResponse
         {
-            return ExecuteAsync(request, CancellationToken.None);
+            return await ExecuteAsync<TRequest, TResponse>(request, CancellationToken.None);
         }
 
-        public async Task<BaseResponse> ExecuteAsync<TRequest>(TRequest request, CancellationToken cancellationToken)
+        public async Task<TResponse> ExecuteAsync<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken)
             where TRequest : BaseRequest
+            where TResponse : BaseResponse
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
@@ -63,7 +65,7 @@ namespace Andead.HttpClient
                         .ConfigureAwait(false);
 
                     var response = ResponseBuilder(httpResponse, _serializerSettings);
-                    return response;
+                    return await response.GetContentOrThrow<TResponse>();
                 }
                 catch (Exception ex)
                 {
